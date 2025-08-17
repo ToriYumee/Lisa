@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"Lisa/internal/config"
+	"Lisa/internal/whatsapp"
 )
 
 func main() {
@@ -36,11 +37,41 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Canal para manejar señales del sistema
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	// Inicializar servicios
+	log.Println("INIT: Inicializando servicios...")
 
-	// Goroutine para simular el bot funcionando
+	// 1. WhatsApp Client
+	log.Println("WA: Inicializando cliente WhatsApp...")
+	waClient, err := whatsapp.NewClient(cfg)
+	if err != nil {
+		log.Fatalf("ERROR: No se pudo crear cliente WhatsApp: %v", err)
+	}
+
+	// Conectar WhatsApp
+	log.Println("WA: Conectando a WhatsApp...")
+	if err := waClient.Connect(); err != nil {
+		log.Fatalf("ERROR: No se pudo conectar a WhatsApp: %v", err)
+	}
+
+	// Configurar cleanup al salir
+	defer func() {
+		log.Println("WA: Desconectando WhatsApp...")
+		waClient.Disconnect()
+	}()
+
+	// TODO: Inicializar otros servicios
+	/*
+		// 2. Discord Bot
+		log.Println("DC: Inicializando bot de Discord...")
+
+		// 3. Gemini AI
+		log.Println("AI: Inicializando Gemini AI...")
+
+		// 4. Jira Client
+		log.Println("JIRA: Inicializando cliente Jira...")
+	*/
+
+	// Goroutine para mostrar status
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
@@ -51,7 +82,11 @@ func main() {
 				log.Println("CONTEXTO: Contexto cancelado, deteniendo servicios...")
 				return
 			case <-ticker.C:
-				log.Println("STATUS: Lisa Bot funcionando correctamente...")
+				waStatus := "DESCONECTADO"
+				if waClient.IsConnected() {
+					waStatus = "CONECTADO"
+				}
+				log.Printf("STATUS: Lisa Bot funcionando - WhatsApp: %s", waStatus)
 			}
 		}
 	}()
@@ -80,6 +115,10 @@ func main() {
 	log.Println("OK: Lisa Bot iniciado correctamente")
 	log.Println("INFO: Presiona Ctrl+C para detener el bot")
 
+	// Canal para manejar señales del sistema
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
 	// Esperar señal de interrupción
 	<-sigChan
 	log.Println("STOP: Senal de interrupcion recibida, deteniendo Lisa Bot...")
@@ -93,19 +132,19 @@ func main() {
 
 func printBanner() {
 	banner := `
-╔═════════════════════════════════════════════════════════════════╗
-║                                                                 ║
+╔══════════════════════════════════════════════════════════════════╗
+║                                                                  ║
 ║    ██╗     ██╗███████╗ █████╗     ██████╗  ██████╗ ████████╗    ║
 ║    ██║     ██║██╔════╝██╔══██╗    ██╔══██╗██╔═══██╗╚══██╔══╝    ║
 ║    ██║     ██║███████╗███████║    ██████╔╝██║   ██║   ██║       ║
 ║    ██║     ██║╚════██║██╔══██║    ██╔══██╗██║   ██║   ██║       ║
 ║    ███████╗██║███████║██║  ██║    ██████╔╝╚██████╔╝   ██║       ║
 ║    ╚══════╝╚═╝╚══════╝╚═╝  ╚═╝    ╚═════╝  ╚═════╝    ╚═╝       ║
-║                                                                 ║
+║                                                                  ║
 ║    Discord + WhatsApp + Jira + AI Assistant Bot                 ║
 ║    Version: 1.0.0                                               ║
-║                                                                 ║
-╚═════════════════════════════════════════════════════════════════╝
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
 `
 	fmt.Println(banner)
 }

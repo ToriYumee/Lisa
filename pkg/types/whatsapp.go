@@ -150,23 +150,23 @@ func NewWhatsAppMessageFromEvent(msg *events.Message) MediaMessage {
 // GetMessageType determina el tipo de mensaje
 func GetMessageType(msg *events.Message) MessageType {
 	switch {
-	case msg.Message.Conversation != nil:
+	case msg.Message.GetConversation() != "":
 		return MessageTypeText
-	case msg.Message.ExtendedTextMessage != nil:
+	case msg.Message.GetExtendedTextMessage() != nil:
 		return MessageTypeText
-	case msg.Message.ImageMessage != nil:
+	case msg.Message.GetImageMessage() != nil:
 		return MessageTypeImage
-	case msg.Message.DocumentMessage != nil:
+	case msg.Message.GetDocumentMessage() != nil:
 		return MessageTypeDocument
-	case msg.Message.AudioMessage != nil:
+	case msg.Message.GetAudioMessage() != nil:
 		return MessageTypeAudio
-	case msg.Message.VideoMessage != nil:
+	case msg.Message.GetVideoMessage() != nil:
 		return MessageTypeVideo
-	case msg.Message.StickerMessage != nil:
+	case msg.Message.GetStickerMessage() != nil:
 		return MessageTypeSticker
-	case msg.Message.ContactMessage != nil:
+	case msg.Message.GetContactMessage() != nil:
 		return MessageTypeContact
-	case msg.Message.LocationMessage != nil:
+	case msg.Message.GetLocationMessage() != nil:
 		return MessageTypeLocation
 	default:
 		return MessageTypeUnknown

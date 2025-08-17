@@ -91,45 +91,188 @@ func (c *Client) handleMessage(msg *events.Message) {
 		return
 	}
 
-	// Para mensajes complejos (imágenes, videos, etc.), usar el procesador avanzado
-	messageType := types.GetMessageType(msg)
-	if messageType != types.MessageTypeText {
-		c.processComplexMessage(msg)
-		return
-	}
-
-	// Para texto básico, manejar aquí
-	text := msg.Message.GetConversation()
-	if text == "" {
-		if msg.Message.ExtendedTextMessage != nil {
-			text = msg.Message.ExtendedTextMessage.GetText()
+	// Obtener información del grupo si es necesario
+	groupName := ""
+	if msg.Info.IsGroup {
+		groupInfo, err := c.whatsAppClient.GetGroupInfo(msg.Info.Chat)
+		if err == nil {
+			groupName = groupInfo.Name
+		} else {
+			groupName = "Grupo desconocido"
 		}
 	}
 
+	// Intentar obtener texto del mensaje
+	text := msg.Message.GetConversation()
+	if text == "" && msg.Message.GetExtendedTextMessage() != nil {
+		text = msg.Message.GetExtendedTextMessage().GetText()
+	}
+
+	// Si hay texto, es un mensaje de texto
 	if text != "" {
 		if msg.Info.IsGroup {
-			groupInfo, err := c.whatsAppClient.GetGroupInfo(msg.Info.Chat)
-			groupName := "Grupo desconocido"
-			if err == nil {
-				groupName = groupInfo.Name
-			}
-
-			log.Printf("WA [GRUPO:%s] %s: %s",
-				groupName,
-				msg.Info.PushName,
-				text,
-			)
+			log.Printf("WA [GRUPO:%s] %s: %s", groupName, msg.Info.PushName, text)
 		} else {
-			log.Printf("WA [PRIVADO] %s: %s",
-				msg.Info.PushName,
-				text,
-			)
+			log.Printf("WA [PRIVADO] %s: %s", msg.Info.PushName, text)
+		}
+	} else {
+		// Para otros tipos de mensaje, determinar el tipo
+		messageType := types.GetMessageType(msg)
+
+		// Log básico para tipos no-texto
+		typeStr := messageType.String()
+		if msg.Info.IsGroup {
+			log.Printf("WA [GRUPO:%s] %s: [%s]", groupName, msg.Info.PushName, typeStr)
+		} else {
+			log.Printf("WA [PRIVADO] %s: [%s]", msg.Info.PushName, typeStr)
+		}
+
+		// Procesar tipos específicos si es necesario
+		if messageType != types.MessageTypeUnknown {
+			c.processComplexMessage(msg)
 		}
 	}
 
 	// Llamar al handler personalizado si existe
 	if c.messageHandler != nil {
 		c.messageHandler(msg)
+	}
+}
+
+func (c *Client) processComplexMessage(msg *events.Message) {
+	// Determinar tipo de mensaje
+	messageType := types.GetMessageType(msg)
+
+	// Obtener información básica del mensaje
+	groupName := ""
+	if msg.Info.IsGroup {
+		groupInfo, err := c.whatsAppClient.GetGroupInfo(msg.Info.Chat)
+		if err == nil {
+			groupName = groupInfo.Name
+		} else {
+			groupName = "Grupo desconocido"
+		}
+	}
+
+	// Procesar según el tipo de mensaje
+	switch messageType {
+	case types.MessageTypeImage:
+		c.handleImageMessage(msg, groupName)
+	case types.MessageTypeAudio:
+		c.handleAudioMessage(msg, groupName)
+	case types.MessageTypeVideo:
+		c.handleVideoMessage(msg, groupName)
+	case types.MessageTypeDocument:
+		c.handleDocumentMessage(msg, groupName)
+	case types.MessageTypeSticker:
+		c.logMessage(msg, groupName, "[STICKER]")
+	case types.MessageTypeContact:
+		c.logMessage(msg, groupName, "[CONTACTO]")
+	case types.MessageTypeLocation:
+		c.logMessage(msg, groupName, "[UBICACIÓN]")
+	default:
+		c.logMessage(msg, groupName, fmt.Sprintf("[%s] No soportado", messageType.String()))
+	}
+}
+
+func (c *Client) handleImageMessage(msg *events.Message, groupName string) {
+	imageMsg := msg.Message.GetImageMessage()
+	if imageMsg == nil {
+		return
+	}
+
+	caption := imageMsg.GetCaption()
+	mimetype := imageMsg.GetMimetype()
+
+	// Log del mensaje
+	logText := "[IMAGEN]"
+	if mimetype != "" {
+		logText += fmt.Sprintf(" (%s)", mimetype)
+	}
+	if caption != "" {
+		logText += fmt.Sprintf(" - Caption: %s", caption)
+	}
+	c.logMessage(msg, groupName, logText)
+
+	// TODO: Implementar descarga de imagen cuando sea necesario
+}
+
+func (c *Client) handleAudioMessage(msg *events.Message, groupName string) {
+	audioMsg := msg.Message.GetAudioMessage()
+	if audioMsg == nil {
+		return
+	}
+
+	mimetype := audioMsg.GetMimetype()
+	duration := audioMsg.GetSeconds()
+
+	logText := "[AUDIO]"
+	if mimetype != "" {
+		logText += fmt.Sprintf(" (%s)", mimetype)
+	}
+	if duration > 0 {
+		logText += fmt.Sprintf(" - %ds", duration)
+	}
+	c.logMessage(msg, groupName, logText)
+
+	// TODO: Implementar descarga de audio cuando sea necesario
+}
+
+func (c *Client) handleVideoMessage(msg *events.Message, groupName string) {
+	videoMsg := msg.Message.GetVideoMessage()
+	if videoMsg == nil {
+		return
+	}
+
+	caption := videoMsg.GetCaption()
+	mimetype := videoMsg.GetMimetype()
+	duration := videoMsg.GetSeconds()
+
+	logText := "[VIDEO]"
+	if mimetype != "" {
+		logText += fmt.Sprintf(" (%s)", mimetype)
+	}
+	if duration > 0 {
+		logText += fmt.Sprintf(" - %ds", duration)
+	}
+	if caption != "" {
+		logText += fmt.Sprintf(" - Caption: %s", caption)
+	}
+	c.logMessage(msg, groupName, logText)
+
+	// TODO: Implementar descarga de video cuando sea necesario
+}
+
+func (c *Client) handleDocumentMessage(msg *events.Message, groupName string) {
+	docMsg := msg.Message.GetDocumentMessage()
+	if docMsg == nil {
+		return
+	}
+
+	filename := docMsg.GetFileName()
+	mimetype := docMsg.GetMimetype()
+	fileSize := docMsg.GetFileLength()
+
+	logText := "[DOCUMENTO]"
+	if filename != "" {
+		logText += fmt.Sprintf(" %s", filename)
+	}
+	if mimetype != "" {
+		logText += fmt.Sprintf(" (%s)", mimetype)
+	}
+	if fileSize > 0 {
+		logText += fmt.Sprintf(" - %d bytes", fileSize)
+	}
+	c.logMessage(msg, groupName, logText)
+
+	// TODO: Implementar descarga de documento cuando sea necesario
+}
+
+func (c *Client) logMessage(msg *events.Message, groupName, content string) {
+	if msg.Info.IsGroup {
+		log.Printf("WA [GRUPO:%s] %s: %s", groupName, msg.Info.PushName, content)
+	} else {
+		log.Printf("WA [PRIVADO] %s: %s", msg.Info.PushName, content)
 	}
 }
 
