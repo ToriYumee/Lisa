@@ -1,0 +1,34 @@
+# Configuración para desarrollo
+server:
+  port: "8080"
+  log_level: "DEBUG"
+  environment: "development"
+
+# Configuración de logging más verbosa para desarrollo
+logging:
+  level: "DEBUG"
+  format: "text"  # Más legible en desarrollo
+  output: "stdout"
+
+# Features habilitadas en desarrollo
+features:
+  auto_create_jira_tickets: false  # Deshabilitado para evitar tickets de prueba
+  ai_suggestions: true
+  whatsapp_monitoring: true
+  discord_commands: true
+
+# Timeouts más permisivos en desarrollo
+limits:
+  message_processing_timeout: "60s"
+  api_request_timeout: "30s"
+  max_concurrent_requests: 5
+
+# Base de datos local para desarrollo
+whatsapp:
+  log_level: "DEBUG"
+
+# Configuración específica de desarrollo
+dev:
+  enable_debug_endpoints: true
+  mock_external_apis: false
+  verbose_logging: true

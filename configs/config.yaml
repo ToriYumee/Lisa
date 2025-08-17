@@ -1,0 +1,42 @@
+# Configuración base para Lisa Bot
+# Las variables sensibles deben definirse en .env
+
+server:
+  port: "8080"
+  log_level: "INFO"
+  environment: "development"
+
+discord:
+  # Token se obtiene de DISCORD_TOKEN
+  guild_id: ""  # Se obtiene de DISCORD_GUILD_ID
+
+whatsapp:
+  log_level: "INFO"
+  # Configuración de base de datos se obtiene de variables POSTGRES_*
+
+jira:
+  project_key: "SUPPORT"
+  # URL, email y token se obtienen de variables JIRA_*
+
+gemini:
+  model: "gemini-pro"
+  # API key se obtiene de GEMINI_API_KEY
+
+# Configuración de features del bot
+features:
+  auto_create_jira_tickets: true
+  ai_suggestions: true
+  whatsapp_monitoring: true
+  discord_commands: true
+
+# Configuración de logging
+logging:
+  level: "INFO"
+  format: "json"
+  output: "stdout"
+
+# Timeouts y límites
+limits:
+  message_processing_timeout: "30s"
+  api_request_timeout: "10s"
+  max_concurrent_requests: 10
