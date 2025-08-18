@@ -294,8 +294,8 @@ func (c *Client) Connect() error {
 
 		for evt := range qrChan {
 			if evt.Event == "code" {
-				log.Printf("WA: Codigo QR: %s", evt.Code)
-				// TODO: Aquí podríamos generar la imagen del QR
+				// Usar la nueva función para mostrar el QR en terminal
+				c.DisplayQRInTerminal(evt.Code)
 			} else if evt.Event == "success" {
 				log.Println("WA: QR escaneado exitosamente")
 				break
